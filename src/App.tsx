@@ -5,6 +5,11 @@ import { NewPatient } from './components/NewPatient';
 import { PreviouslyDiagnosed } from './components/PreviouslyDiagnosed';
 import type { AppMode } from './types';
 
+/**
+ * Main App component
+ * - Controls which screen to show (login, mode selection, new patient, or previously diagnosed)
+ * - Passes down functions to children so they can change the screen
+ */
 function App() {
   const [currentMode, setCurrentMode] = useState<AppMode>('login');
 
