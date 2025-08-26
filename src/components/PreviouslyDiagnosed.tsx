@@ -2,27 +2,28 @@ import React, { useState } from 'react';
 import { ArrowLeft, Brain, BarChart3, AlertCircle, CheckCircle, Target, Zap, Database } from 'lucide-react';
 import type { Patient, PredictionResult } from '../types';
 import { THYROID_FUNCTION_OPTIONS, PHYSICAL_EXAM_OPTIONS, PATHOLOGY_OPTIONS, TUMOR_STAGES, NODE_STAGES, AGE_OPTIONS } from '../utils/constants';
+import { postPredict } from "../lib/api";
 
 interface PreviouslyDiagnosedProps {
   onBack: () => void;
 }
 
 export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack }) => {
-  const [patient, setPatient] = useState<Patient>({
-    age: 45,
-    gender: 'F',
-    smoking: false,
-    smokingHistory: false,
-    radiotherapyHistory: false,
-    thyroidFunction: THYROID_FUNCTION_OPTIONS[0],
-    physicalExam: PHYSICAL_EXAM_OPTIONS[0],
-    adenopathy: 'Unilateral',
-    pathology: PATHOLOGY_OPTIONS[0],
-    focality: 'Uni-Focal',
-    riskATA: 'Low',
-    tumorStage: TUMOR_STAGES[0],
-    nodeStage: NODE_STAGES[0],
-    metastasis: 'M0'
+  const [patient, setPatient] = useState<Partial<Patient>>({
+    age: undefined,
+    gender: undefined,
+    smoking: undefined,
+    smokingHistory: undefined,
+    radiotherapyHistory: undefined,
+    thyroidFunction: '',
+    physicalExam: '',
+    adenopathy: undefined,
+    pathology: '',
+    focality: undefined,
+    riskATA: undefined,
+    tumorStage: '',
+    nodeStage: '',
+    metastasis: undefined
   });
 
   const [isPredicting, setIsPredicting] = useState(false);
@@ -32,55 +33,82 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
     setPatient(prev => ({ ...prev, [field]: value }));
   };
 
+  const isFormComplete = () => {
+    return (
+      patient.age !== undefined &&
+      patient.gender !== undefined &&
+      patient.smoking !== undefined &&
+      patient.smokingHistory !== undefined &&
+      patient.radiotherapyHistory !== undefined &&
+      patient.thyroidFunction !== '' &&
+      patient.physicalExam !== '' &&
+      patient.adenopathy !== undefined &&
+      patient.pathology !== '' &&
+      patient.focality !== undefined &&
+      patient.riskATA !== undefined &&
+      patient.tumorStage !== '' &&
+      patient.nodeStage !== '' &&
+      patient.metastasis !== undefined
+    );
+  };
+
   const clearForm = () => {
     setPatient({
-      age: 45,
-      gender: 'F',
-      smoking: false,
-      smokingHistory: false,
-      radiotherapyHistory: false,
-      thyroidFunction: THYROID_FUNCTION_OPTIONS[0],
-      physicalExam: PHYSICAL_EXAM_OPTIONS[0],
-      adenopathy: 'Unilateral',
-      pathology: PATHOLOGY_OPTIONS[0],
-      focality: 'Uni-Focal',
-      riskATA: 'Low',
-      tumorStage: TUMOR_STAGES[0],
-      nodeStage: NODE_STAGES[0],
-      metastasis: 'M0'
+      age: undefined,
+      gender: undefined,
+      smoking: undefined,
+      smokingHistory: undefined,
+      radiotherapyHistory: undefined,
+      thyroidFunction: '',
+      physicalExam: '',
+      adenopathy: undefined,
+      pathology: '',
+      focality: undefined,
+      riskATA: undefined,
+      tumorStage: '',
+      nodeStage: '',
+      metastasis: undefined
     });
     setPredictionResult(null);
   };
 
-  const predict = async () => {
+    // Send patient data to the backend, get prediction, update UI (all through the api).
+    const predict = async () => {
     setIsPredicting(true);
-    
-    // Simulate ML prediction
-    setTimeout(() => {
-      const mockResults: PredictionResult[] = [
-        {
-          cancerStage: 'Stage IVB',
-          aiModels: ['XGBoost', 'LightGBM', 'Random Forest'],
-          recurrence: true,
-          probability: 0.87
-        },
-        {
-          cancerStage: 'Stage I',
-          aiModels: ['XGBoost', 'LightGBM'],
-          recurrence: false,
-          probability: 0.15
-        },
-        {
-          cancerStage: 'Stage III',
-          aiModels: ['XGBoost', 'Neural Network'],
-          recurrence: true,
-          probability: 0.63
-        }
-      ];
-      
-      setPredictionResult(mockResults[Math.floor(Math.random() * mockResults.length)]);
+    setPredictionResult(null);
+    try {
+      const payload = {
+        age: patient.age!,
+        gender: patient.gender!,
+        smoking: Boolean(patient.smoking),
+        smokingHistory: Boolean(patient.smokingHistory),
+        radiotherapyHistory: Boolean(patient.radiotherapyHistory),
+        thyroidFunction: patient.thyroidFunction!,
+        physicalExam: patient.physicalExam!,
+        adenopathy: patient.adenopathy!,
+        pathology: patient.pathology!,
+        focality: patient.focality!,
+        riskATA: patient.riskATA!,
+        tumorStage: patient.tumorStage!,
+        nodeStage: patient.nodeStage!,
+        metastasis: patient.metastasis!,
+      };
+  
+      // Update UI with prediction 
+      const r = await postPredict(payload);
+  
+      setPredictionResult({
+        cancerStage: r.stage,
+        aiModels: [r.model],       
+        recurrence: r.recurrence,  
+        probability: Math.round(r.probability * 100) / 100
+      });
+    } catch (e) {
+      console.error(e);
+      alert("Prediction failed. Please try again.");
+    } finally {
       setIsPredicting(false);
-    }, 2500);
+    }
   };
 
   return (
@@ -116,10 +144,11 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Age</label>
                     <select
-                      value={patient.age}
-                      onChange={(e) => updatePatient('age', Number(e.target.value))}
+                      value={patient.age ?? ""}
+                      onChange={(e) => updatePatient("age", e.target.value === "" ? undefined : Number(e.target.value))}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
+                      <option value="">Select age...</option>
                       {AGE_OPTIONS.map(age => (
                         <option key={age} value={age}>{age}</option>
                       ))}
@@ -128,12 +157,13 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Gender</label>
                     <select
-                      value={patient.gender}
-                      onChange={(e) => updatePatient('gender', e.target.value)}
+                      value={patient.gender ?? ""}
+                      onChange={(e) => updatePatient('gender', e.target.value == "" ? undefined : e.target.value )}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="F">Female</option>
-                      <option value="M">Male</option>
+                      <option value="">Select gender...</option>
+                      <option value="F">F</option>
+                      <option value="M">M</option>
                     </select>
                   </div>
                 </div>
@@ -148,7 +178,7 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                         <button
                           onClick={() => updatePatient('smoking', true)}
                           className={`px-3 py-1 rounded text-sm font-semibold ${
-                            patient.smoking ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-600'
+                            patient.smoking === true ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
                           }`}
                         >
                           Yes
@@ -156,7 +186,7 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                         <button
                           onClick={() => updatePatient('smoking', false)}
                           className={`px-3 py-1 rounded text-sm font-semibold ${
-                            !patient.smoking ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
+                            patient.smoking === false ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-600'
                           }`}
                         >
                           No
@@ -169,7 +199,7 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                         <button
                           onClick={() => updatePatient('smokingHistory', true)}
                           className={`px-3 py-1 rounded text-sm font-semibold ${
-                            patient.smokingHistory ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-600'
+                            patient.smokingHistory === true ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
                           }`}
                         >
                           Yes
@@ -177,7 +207,7 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                         <button
                           onClick={() => updatePatient('smokingHistory', false)}
                           className={`px-3 py-1 rounded text-sm font-semibold ${
-                            !patient.smokingHistory ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
+                            patient.smokingHistory === false ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-600'
                           }`}
                         >
                           No
@@ -192,7 +222,7 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                       <button
                         onClick={() => updatePatient('radiotherapyHistory', true)}
                         className={`px-3 py-1 rounded text-sm font-semibold ${
-                          patient.radiotherapyHistory ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-600'
+                          patient.radiotherapyHistory === true ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
                         }`}
                       >
                         Yes
@@ -200,7 +230,7 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                       <button
                         onClick={() => updatePatient('radiotherapyHistory', false)}
                         className={`px-3 py-1 rounded text-sm font-semibold ${
-                          !patient.radiotherapyHistory ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
+                          patient.radiotherapyHistory === false ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-600'
                         }`}
                       >
                         No
@@ -215,10 +245,11 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Thyroid Function</label>
                     <select
-                      value={patient.thyroidFunction}
+                      value={patient.thyroidFunction || ''}
                       onChange={(e) => updatePatient('thyroidFunction', e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
+                      <option value="">Select thyroid function...</option>
                       {THYROID_FUNCTION_OPTIONS.map(option => (
                         <option key={option} value={option}>{option}</option>
                       ))}
@@ -228,10 +259,11 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Physical Exam</label>
                     <select
-                      value={patient.physicalExam}
+                      value={patient.physicalExam || ''}
                       onChange={(e) => updatePatient('physicalExam', e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
+                      <option value="">Select physical exam...</option>
                       {PHYSICAL_EXAM_OPTIONS.map(option => (
                         <option key={option} value={option}>{option}</option>
                       ))}
@@ -242,21 +274,26 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Adenopathy</label>
                       <select
-                        value={patient.adenopathy}
+                        value={patient.adenopathy || ''}
                         onChange={(e) => updatePatient('adenopathy', e.target.value)}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="Unilateral">Unilateral</option>
+                        <option value="">Select adenopathy...</option>
+                        <option value="No">No</option>
+                        <option value="Right">Right</option>
+                        <option value="Left">Left</option>
                         <option value="Bilateral">Bilateral</option>
+                        <option value="Extensive">Extensive</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Pathology</label>
                       <select
-                        value={patient.pathology}
+                        value={patient.pathology || ''}
                         onChange={(e) => updatePatient('pathology', e.target.value)}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
+                        <option value="">Select pathology...</option>
                         {PATHOLOGY_OPTIONS.map(option => (
                           <option key={option} value={option}>{option}</option>
                         ))}
@@ -272,10 +309,11 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Focality</label>
                       <select
-                        value={patient.focality}
+                        value={patient.focality || ''}
                         onChange={(e) => updatePatient('focality', e.target.value)}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
+                        <option value="">Select focality...</option>
                         <option value="Uni-Focal">Uni-Focal</option>
                         <option value="Multi-Focal">Multi-Focal</option>
                       </select>
@@ -283,10 +321,11 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Risk (ATA 2015)</label>
                       <select
-                        value={patient.riskATA}
+                        value={patient.riskATA || ''}
                         onChange={(e) => updatePatient('riskATA', e.target.value)}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
+                        <option value="">Select risk level...</option>
                         <option value="Low">Low</option>
                         <option value="Intermediate">Intermediate</option>
                         <option value="High">High</option>
@@ -298,10 +337,11 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">T (Tumor)</label>
                       <select
-                        value={patient.tumorStage}
+                        value={patient.tumorStage || ''}
                         onChange={(e) => updatePatient('tumorStage', e.target.value)}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
+                        <option value="">Select tumor stage...</option>
                         {TUMOR_STAGES.map(stage => (
                           <option key={stage} value={stage}>{stage}</option>
                         ))}
@@ -310,10 +350,11 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">N (Node)</label>
                       <select
-                        value={patient.nodeStage}
+                        value={patient.nodeStage || ''}
                         onChange={(e) => updatePatient('nodeStage', e.target.value)}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
+                        <option value="">Select node stage...</option>
                         {NODE_STAGES.map(stage => (
                           <option key={stage} value={stage}>{stage}</option>
                         ))}
@@ -322,10 +363,11 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">M (Metastasis)</label>
                       <select
-                        value={patient.metastasis}
+                        value={patient.metastasis || ''}
                         onChange={(e) => updatePatient('metastasis', e.target.value)}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
+                        <option value="">Select metastasis...</option>
                         <option value="M0">M0</option>
                         <option value="M1">M1</option>
                       </select>
@@ -337,7 +379,7 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                 <div className="flex space-x-4 pt-4">
                   <button
                     onClick={predict}
-                    disabled={isPredicting}
+                    disabled={isPredicting || !isFormComplete()}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center"
                   >
                     {isPredicting ? (
@@ -434,7 +476,7 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                       </div>
                       
                       <div className="text-right">
-                        <div className="text-sm text-gray-600 mb-1">Confidence</div>
+                        <div className="text-sm text-gray-600 mb-1">Probability</div>
                         <div className={`text-lg font-bold ${
                           predictionResult.recurrence ? 'text-red-700' : 'text-green-700'
                         }`}>
