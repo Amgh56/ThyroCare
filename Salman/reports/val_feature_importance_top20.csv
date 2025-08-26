@@ -1,0 +1,21 @@
+﻿feature,importance
+Risk_Low,0.3279964
+Adenopathy_No,0.092960306
+N_N0,0.07548451
+N_N1b,0.06606197
+Risk_High,0.059333816
+Stage_I,0.042649973
+Smoking_No,0.040870864
+Gender_F,0.037070047
+Age,0.03247049
+Gender_M,0.031397074
+T_T3a,0.024685873
+T_T2,0.02394968
+Risk_Intermediate,0.023796042
+Focality_Multi-Focal,0.022944601
+Physical Examination_Multinodular goiter,0.022290671
+Physical Examination_Single nodular goiter-left,0.021455174
+Focality_Uni-Focal,0.01978407
+Physical Examination_Single nodular goiter-right,0.019103967
+Adenopathy_Right,0.015694514
+Smoking_Yes,0.0
