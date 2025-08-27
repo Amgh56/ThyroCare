@@ -3,6 +3,7 @@ import { ArrowLeft, Brain, BarChart3, AlertCircle, CheckCircle, Target, Zap, Dat
 import type { Patient, PredictionResult } from '../types';
 import { THYROID_FUNCTION_OPTIONS, PHYSICAL_EXAM_OPTIONS, PATHOLOGY_OPTIONS, TUMOR_STAGES, NODE_STAGES, AGE_OPTIONS } from '../utils/constants';
 import { postPredict } from "../lib/api";
+import { getClinicalRecommendation } from "../utils/recommendations";
 
 interface PreviouslyDiagnosedProps {
   onBack: () => void;
@@ -72,7 +73,7 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
     setPredictionResult(null);
   };
 
-    // Send patient data to the backend, get prediction, update UI (all through the api).
+    // Send patient data to the backend, get prediction from api.ts, update UI (all through the api).
     const predict = async () => {
     setIsPredicting(true);
     setPredictionResult(null);
@@ -498,21 +499,32 @@ export const PreviouslyDiagnosed: React.FC<PreviouslyDiagnosedProps> = ({ onBack
                     </div>
                   </div>
 
-                  {predictionResult.recurrence && (
-                    <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                      <h3 className="font-semibold text-amber-900 mb-2 flex items-center">
+                 {/* Clinical Recommendation (dynamic) */}
+                {(() => {
+                const rec = getClinicalRecommendation(
+                    predictionResult.probability,
+                    predictionResult.recurrence,
+                    patient
+                );
+                return (
+                    <div className={`p-4 rounded-lg border ${rec.box}`}>
+                    <h3 className="font-semibold mb-2 flex items-center">
                         <Zap className="w-4 h-4 mr-2" />
-                        Clinical Recommendation
-                      </h3>
-                      <p className="text-amber-800 text-sm leading-relaxed">
-                        High-risk patient requiring intensive surveillance. Recommend follow-up imaging every 3-6 months 
-                        and regular thyroglobulin monitoring. Consider adjuvant therapy consultation.
-                      </p>
+                        Clinical Recommendation — {rec.label}
+                    </h3>
+                    <ul className="list-disc pl-5 space-y-1">
+                        {rec.actions.map((a, i) => (
+                        <li key={i} className="text-sm">{a}</li>
+                        ))}
+                    </ul>
+                    {rec.note && <p className="text-sm mt-3 opacity-80">{rec.note}</p>}
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
+                );
+                })()}
+                
+                 </div>   
+                </div>  
+                )}       
 
             {!predictionResult && !isPredicting && (
               <div className="bg-white rounded-xl shadow-sm p-6">
