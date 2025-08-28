@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Lock, Stethoscope } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (username: string) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -18,7 +18,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     // Simulate authentication
     setTimeout(() => {
       setIsLoading(false);
-      onLogin();
+      onLogin(username);
     }, 1000);
   };
 

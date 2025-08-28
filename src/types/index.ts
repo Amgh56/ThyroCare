@@ -29,4 +29,36 @@ export interface Patient {
     probability: number;
   }
   
-  export type AppMode = 'login' | 'mode-selection' | 'new-patient' | 'previously-diagnosed';
+  export interface PatientCase {
+    id: string;
+    name: string;
+    fileNumber: string;
+    biopsiesExcluded: number;
+    caseSummary: string;
+    lastSession: string;
+    status: 'Active' | 'Completed' | 'Follow-up Required';
+  }
+  
+  export interface CaseHistory {
+    id: string;
+    date: string;
+    type: 'Ultrasound Analysis' | 'Recurrence Prediction';
+    results: string;
+    notes: string;
+  }
+  
+  export interface PatientDetails extends PatientCase {
+    patient: Patient;
+    caseHistory: CaseHistory[];
+    referrals: {
+      id: string;
+      date: string;
+      referredTo: string;
+      reason: string;
+      status: 'Pending' | 'Completed' | 'Cancelled';
+    }[];
+  }
+  
+  export type AppMode = 'login' | 'dashboard' | 'ultrasound-analysis' | 'previously-diagnosed' | 'patient-view' | 'case-selection';
+
+  export type NavMode = Exclude<AppMode, 'login'>;
